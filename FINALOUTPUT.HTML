@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAULT — Distributed Object Storage</title>
+<style>
+:root{
+    --bg:#070b14;
+    --panel:#0e1524;
+    --panel2:#121b2d;
+    --line:#22304a;
+    --text:#edf3ff;
+    --muted:#8d9ab3;
+    --blue:#5b8cff;
+    --cyan:#4dd9ff;
+    --green:#45d483;
+    --yellow:#f2c14e;
+    --red:#ff647c;
+    --purple:#a979ff;
+    --shadow:0 18px 50px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+    margin:0;
+    font-family:Inter,Segoe UI,Arial,sans-serif;
+    background:
+      radial-gradient(circle at 80% 0%,rgba(91,140,255,.12),transparent 28%),
+      radial-gradient(circle at 20% 20%,rgba(77,217,255,.06),transparent 25%),
+      var(--bg);
+    color:var(--text);
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar{
+    width:245px;position:fixed;inset:0 auto 0 0;
+    background:rgba(9,14,25,.96);border-right:1px solid var(--line);
+    padding:22px 14px;z-index:20;
+}
+.brand{font-size:27px;font-weight:900;letter-spacing:2px;padding:8px 14px 28px}
+.brand span{color:var(--blue)}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:1px;margin-top:5px}
+.nav{
+    display:flex;align-items:center;gap:11px;width:100%;
+    padding:12px 14px;margin:4px 0;border:0;border-radius:10px;
+    background:transparent;color:var(--muted);text-align:left;
+}
+.nav:hover,.nav.active{background:var(--panel2);color:#fff}
+.nav .icon{width:22px;text-align:center}
+.sidebar-footer{position:absolute;bottom:20px;left:20px;right:20px;color:var(--muted);font-size:11px;line-height:1.5}
+.main{margin-left:245px;width:calc(100% - 245px);padding:24px 30px 60px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}
+.eyebrow{font-size:11px;letter-spacing:2px;color:var(--cyan);font-weight:800}
+h1{margin:5px 0;font-size:30px}
+.subtitle{color:var(--muted);font-size:14px}
+.health{
+    display:flex;align-items:center;gap:9px;padding:10px 15px;
+    border:1px solid rgba(69,212,131,.3);background:rgba(69,212,131,.08);
+    color:var(--green);border-radius:999px;font-size:12px;font-weight:800;
+}
+.health-dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}
+.health.degraded{color:var(--yellow);border-color:rgba(242,193,78,.3);background:rgba(242,193,78,.08)}
+.health.failed{color:var(--red);border-color:rgba(255,100,124,.3);background:rgba(255,100,124,.08)}
+.grid{display:grid;gap:16px}
+.stats{grid-template-columns:repeat(6,minmax(130px,1fr));margin-bottom:18px}
+.card{
+    background:linear-gradient(180deg,rgba(18,27,45,.96),rgba(12,19,32,.96));
+    border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);
+}
+.stat{padding:17px}
+.stat-label{color:var(--muted);font-size:10px;letter-spacing:1.2px;font-weight:800}
+.stat-value{font-size:25px;font-weight:900;margin-top:9px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:6px}
+.green{color:var(--green)!important}.red{color:var(--red)!important}.yellow{color:var(--yellow)!important}.blue{color:var(--blue)!important}.cyan{color:var(--cyan)!important}
+.two{grid-template-columns:1.4fr 1fr}
+.three{grid-template-columns:repeat(3,1fr)}
+.section{padding:19px;margin-bottom:18px}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}
+.section-title{font-size:16px;font-weight:850}
+.section-desc{font-size:11px;color:var(--muted);margin-top:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+    border:1px solid var(--line);background:#172238;color:#dce6fa;
+    border-radius:9px;padding:9px 12px;font-size:12px;font-weight:750;
+}
+.btn:hover{background:#20304d}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.success{background:rgba(69,212,131,.12);border-color:rgba(69,212,131,.35);color:var(--green)}
+.btn.danger{background:rgba(255,100,124,.1);border-color:rgba(255,100,124,.3);color:#ff8da0}
+.btn.warn{background:rgba(242,193,78,.1);border-color:rgba(242,193,78,.3);color:var(--yellow)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.nodes{grid-template-columns:repeat(4,1fr)}
+.node{padding:17px}
+.node-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.node-name{font-weight:850}
+.node-id{font-size:10px;color:var(--muted);margin-top:3px}
+.pill{padding:4px 8px;border-radius:999px;font-size:10px;font-weight:850}
+.pill.healthy{color:var(--green);background:rgba(69,212,131,.1)}
+.pill.failed{color:var(--red);background:rgba(255,100,124,.1)}
+.pill.degraded{color:var(--yellow);background:rgba(242,193,78,.1)}
+.progress{height:7px;background:#1a263d;border-radius:99px;overflow:hidden;margin:14px 0 8px}
+.progress i{display:block;height:100%;background:var(--blue);border-radius:99px}
+.node-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+.node-actions{display:flex;gap:7px;margin-top:14px}
+.upload{
+    border:1px dashed #355070;border-radius:13px;padding:25px;text-align:center;
+    background:rgba(8,14,25,.5)
+}
+.upload.drag{border-color:var(--cyan);background:rgba(77,217,255,.06)}
+.upload-icon{font-size:32px;margin-bottom:7px}
+.upload h3{margin:5px 0;font-size:17px}
+.upload p{color:var(--muted);font-size:12px;margin:7px 0 16px}
+.hidden{display:none!important}
+.policy{display:flex;align-items:center;gap:10px}
+select,input[type=search]{
+    background:#0b1322;color:#eef4ff;border:1px solid var(--line);
+    border-radius:8px;padding:9px 10px;outline:none;
+}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 10px;border-bottom:1px solid #1d2940;text-align:left;font-size:12px}
+th{color:#73819c;font-size:10px;letter-spacing:1px}
+td{color:#dbe5f7}
+tr:hover td{background:rgba(91,140,255,.025)}
+.object-name{font-weight:750}
+.object-meta{font-size:10px;color:var(--muted);margin-top:3px}
+.status{font-size:10px;font-weight:850;padding:4px 8px;border-radius:999px}
+.status.healthy{color:var(--green);background:rgba(69,212,131,.1)}
+.status.degraded{color:var(--yellow);background:rgba(242,193,78,.1)}
+.status.corrupted{color:var(--red);background:rgba(255,100,124,.1)}
+.status.unavailable{color:var(--red);background:rgba(255,100,124,.1)}
+.status.repairing{color:var(--cyan);background:rgba(77,217,255,.1)}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.log{max-height:320px;overflow:auto}
+.log-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #1d2940;font-size:11px}
+.log-time{color:#65738e;min-width:75px}
+.log-tag{font-weight:850;min-width:90px}
+.detail-grid{grid-template-columns:repeat(2,1fr)}
+.kv{display:flex;justify-content:space-between;gap:15px;padding:9px 0;border-bottom:1px solid #1d2940;font-size:12px}
+.kv span:first-child{color:var(--muted)}
+.mini-replica{display:inline-flex;gap:4px;flex-wrap:wrap}
+.replica-dot{font-size:10px;padding:3px 6px;border-radius:5px;background:#172238;color:#aebbd2}
+.replica-dot.ok{color:var(--green)}.replica-dot.bad{color:var(--red)}
+.toast-wrap{position:fixed;right:22px;bottom:22px;z-index:100;display:flex;flex-direction:column;gap:9px}
+.toast{min-width:260px;max-width:390px;padding:13px 15px;background:#121c30;border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);font-size:12px}
+.toast strong{display:block;margin-bottom:4px}.toast span{color:var(--muted)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
+.modal{width:min(720px,100%);max-height:90vh;overflow:auto;background:#0d1627;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.modal-head{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:14px}
+.close{border:0;background:transparent;color:var(--muted);font-size:23px}
+.repair-item{border:1px solid var(--line);padding:12px;border-radius:10px;margin-bottom:9px}
+.repair-item strong{font-size:12px}.repair-item p{color:var(--muted);font-size:11px;margin:5px 0}
+.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;word-break:break-all;color:#9fb8e9}
+.footer-note{color:#687691;font-size:10px;line-height:1.6;margin-top:8px}
+
+.chaos-card{border:1px solid rgba(167,121,255,.35);background:linear-gradient(135deg,rgba(167,121,255,.08),rgba(91,140,255,.04))}
+.chaos-title{display:flex;align-items:center;gap:8px;font-weight:850}
+.chaos-badge{font-size:9px;padding:4px 7px;border-radius:999px;color:#d8c4ff;background:rgba(167,121,255,.14);border:1px solid rgba(167,121,255,.25)}
+.topology{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.topology-node{position:relative;padding:14px 10px;border:1px solid var(--line);border-radius:11px;background:#0b1322;text-align:center}
+.topology-node.healthy{border-color:rgba(69,212,131,.35)}
+.topology-node.failed{border-color:rgba(255,100,124,.45);opacity:.72}
+.topology-node .tn-name{font-weight:800;font-size:12px}
+.topology-node .tn-state{font-size:9px;margin-top:5px;color:var(--muted)}
+.topology-node.healthy .tn-state{color:var(--green)}
+.topology-node.failed .tn-state{color:var(--red)}
+.topology-node .tn-reps{font-size:9px;color:#9fb8e9;margin-top:8px}
+.chaos-result{margin-top:12px;padding:10px 12px;border-radius:9px;background:rgba(8,14,25,.55);font-size:11px;color:var(--muted);line-height:1.7}
+.chaos-result strong{color:#fff}
+@media(max-width:620px){.topology{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1250px){.stats{grid-template-columns:repeat(3,1fr)}.nodes{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:850px){.sidebar{width:68px;padding:15px 8px}.brand{font-size:0;text-align:center;padding:8px 0 25px}.brand span{font-size:24px}.brand small,.nav span:not(.icon),.sidebar-footer{display:none}.nav{justify-content:center;padding:12px 0}.main{margin-left:68px;width:calc(100% - 68px);padding:18px}.two,.three,.detail-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.stats,.nodes{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}.main{padding:14px 10px}th:nth-child(4),td:nth-child(4){display:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+<aside class="sidebar">
+    <div class="brand">VAU<span>LT</span><small>DISTRIBUTED OBJECT STORAGE</small></div>
+    <button class="nav active" data-view="overview"><span class="icon">◉</span><span>Overview</span></button>
+    <button class="nav" data-view="objects"><span class="icon">▣</span><span>Objects</span></button>
+    <button class="nav" data-view="nodes"><span class="icon">◈</span><span>Storage Nodes</span></button>
+    <button class="nav" data-view="topology"><span class="icon">⌘</span><span>Topology</span></button>
+    <button class="nav" data-view="repair"><span class="icon">↻</span><span>Repair Center</span></button>
+    <button class="nav" data-view="integrity"><span class="icon">✓</span><span>Integrity</span></button>
+    <button class="nav" data-view="policies"><span class="icon">⚙</span><span>Policies</span></button>
+    <button class="nav" data-view="activity"><span class="icon">≡</span><span>Activity</span></button>
+    <div class="sidebar-footer">
+        Browser-based Vault prototype<br>
+        Real file hashing + IndexedDB storage
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <div class="eyebrow">VAULT CONTROL PLANE</div>
+            <h1>Distributed Object Storage</h1>
+            <div class="subtitle">Replication, integrity verification, failure simulation, self-healing and resilience testing.</div>
+        </div>
+        <div id="healthBadge" class="health"><i class="health-dot"></i><span>SYSTEM HEALTHY</span></div>
+    </header>
+
+    <section class="grid stats">
+        <div class="card stat"><div class="stat-label">ACTIVE NODES</div><div id="statNodes" class="stat-value">0/0</div><div class="stat-sub">Current healthy nodes</div></div>
+        <div class="card stat"><div class="stat-label">OBJECTS</div><div id="statObjects" class="stat-value">0</div><div class="stat-sub">Stored object metadata</div></div>
+        <div class="card stat"><div class="stat-label">REPLICATION</div><div id="statReplication" class="stat-value blue">3×</div><div class="stat-sub">Configured factor</div></div>
+        <div class="card stat"><div class="stat-label">HEALTHY REPLICAS</div><div id="statReplicas" class="stat-value green">0</div><div class="stat-sub">Verified copies</div></div>
+        <div class="card stat"><div class="stat-label">STORAGE USED</div><div id="statStorage" class="stat-value">0 B</div><div class="stat-sub">Across simulated nodes</div></div>
+        <div class="card stat"><div class="stat-label">REPAIRS</div><div id="statRepairs" class="stat-value">0</div><div class="stat-sub">Completed repairs</div></div>
+    </section>
+
+    <section class="grid two">
+        <div class="card section" id="uploadSection">
+            <div class="section-head">
+                <div><div class="section-title">Upload Object</div><div class="section-desc">A real local file is hashed and replicated into browser storage.</div></div>
+                <div class="policy">Factor <select id="replicationSelect"><option>1</option><option>2</option><option selected>3</option><option>4</option></select></div>
+            </div>
+            <div class="upload" id="dropZone">
+                <div class="upload-icon">⇧</div>
+                <h3>Drop a file here</h3>
+                <p>or choose a file from your computer. No file is uploaded to an external server.</p>
+                <label class="btn primary" for="fileInput">CHOOSE FILE</label>
+                <input id="fileInput" class="hidden" type="file">
+            </div>
+            <div id="uploadInfo" class="footer-note">Replication will use healthy nodes only. The object is considered healthy when the configured number of verified replicas exists.</div>
+        </div>
+
+        <div class="card section chaos-card">
+            <div class="section-head">
+                <div><div class="chaos-title">⚡ Judge Demo <span class="chaos-badge">RESILIENCE TEST</span></div><div class="section-desc">One-click failure, corruption, repair and verification workflow.</div></div>
+            </div>
+            <div class="actions">
+                <button class="btn primary" id="chaosBtn">RUN CHAOS TEST</button>
+                <button class="btn" id="scanBtn">Integrity Scan</button>
+                <button class="btn warn" id="failNextBtn">Fail Next Node</button>
+                <button class="btn success" id="repairAllBtn">Repair All</button>
+                <button class="btn danger" id="resetBtn">Reset Vault</button>
+            </div>
+            <div id="chaosResult" class="chaos-result"><strong>Demo sequence:</strong> store → node failure → corruption → detection → self-healing → recovery → final integrity check.</div>
+        </div>
+    </section>
+
+    <section class="card section" id="nodesSection">
+        <div class="section-head">
+            <div><div class="section-title">Storage Nodes</div><div class="section-desc">Four independent logical storage nodes.</div></div>
+            <span id="nodeSummary" class="subtitle"></span>
+        </div>
+        <div id="nodesGrid" class="grid nodes"></div>
+    </section>
+
+    <section class="card section" id="topologySection">
+        <div class="section-head">
+            <div><div class="section-title">Live Node Topology</div><div class="section-desc">Visual view of node health and replica distribution.</div></div>
+            <span id="topologySummary" class="subtitle"></span>
+        </div>
+        <div id="topology" class="topology"></div>
+    </section>
+
+    <section class="card section" id="objectsSection">
+        <div class="section-head">
+            <div><div class="section-title">Object Inventory</div><div class="section-desc">Every object has a SHA-256 checksum and replica map.</div></div>
+            <input id="objectSearch" type="search" placeholder="Search objects...">
+        </div>
+        <div style="overflow:auto">
+            <table>
+                <thead><tr><th>OBJECT</th><th>SIZE</th><th>REPLICAS</th><th>SHA-256</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+                <tbody id="objectsBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="grid two">
+        <div class="card section" id="repairSection">
+            <div class="section-head">
+                <div><div class="section-title">Repair Center</div><div class="section-desc">Detected replica loss and corruption events.</div></div>
+                <button class="btn success" id="repairCenterBtn">REPAIR ALL</button>
+            </div>
+            <div id="repairList"></div>
+        </div>
+        <div class="card section" id="integritySection">
+            <div class="section-head">
+                <div><div class="section-title">Integrity Monitor</div><div class="section-desc">Checksum verification across available replicas.</div></div>
+                <button class="btn" id="verifyBtn">VERIFY ALL</button>
+            </div>
+            <div id="integrityList"></div>
+        </div>
+    </section>
+
+    <section class="card section" id="policiesSection">
+        <div class="section-head">
+            <div><div class="section-title">Policies & System Information</div><div class="section-desc">Configuration used by the browser prototype.</div></div>
+        </div>
+        <div class="grid detail-grid">
+            <div>
+                <div class="kv"><span>Replication factor</span><strong id="policyReplication">3×</strong></div>
+                <div class="kv"><span>Integrity algorithm</span><strong>SHA-256</strong></div>
+                <div class="kv"><span>Storage engine</span><strong>IndexedDB</strong></div>
+                <div class="kv"><span>Node count</span><strong>4</strong></div>
+            </div>
+            <div>
+                <div class="kv"><span>Repair mode</span><strong>Automatic / manual</strong></div>
+                <div class="kv"><span>Failure model</span><strong>Logical node failure</strong></div>
+                <div class="kv"><span>Persistence</span><strong>Browser-local</strong></div>
+                <div class="kv"><span>External server</span><strong>None</strong></div>
+            </div>
+        </div>
+        <div class="footer-note">This single-file implementation is a functional browser prototype, not a multi-machine distributed cluster. Independent physical servers would require a backend and networked nodes.</div>
+    </section>
+
+    <section class="card section" id="activitySection">
+        <div class="section-head">
+            <div><div class="section-title">Activity Log</div><div class="section-desc">System events generated by actual operations.</div></div>
+            <button class="btn" id="clearLogBtn">CLEAR LOG</button>
+        </div>
+        <div id="activityLog" class="log"></div>
+    </section>
+</main>
+</div>
+
+<div id="modalRoot" class="hidden"></div>
+<div id="toastWrap" class="toast-wrap"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   VAULT — SINGLE FILE STORAGE ENGINE
+   ============================================================
+   This implementation uses:
+   - IndexedDB for browser-local persistent object data
+   - Web Crypto API for real SHA-256 checksums
+   - Blob/File objects for actual bytes
+   - Four logical storage nodes
+   - Replica metadata
+   - Failure and corruption simulation
+   - Automatic repair
+   ============================================================ */
+
+const CONFIG = {
+    dbName: "VaultSingleFileDB",
+    dbVersion: 1,
+    objectStore: "replicas",
+    metaStore: "metadata",
+    nodeCount: 4,
+    nodeCapacityBytes: 1024 * 1024 * 1024,
+    defaultReplication: 3
+};
+
+let state = {
+    nodes: [],
+    objects: [],
+    repairs: [],
+    logs: [],
+    replicationFactor: CONFIG.defaultReplication,
+    selectedObjectId: null
+};
+
+const $ = id => document.getElementById(id);
+
+function uid(prefix="id"){
+    return prefix + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,9);
+}
+
+function now(){
+    return new Date();
+}
+
+function timeString(){
+    return now().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+}
+
+function formatBytes(bytes){
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+    const units = ["B","KB","MB","GB","TB"];
+    const i = Math.min(Math.floor(Math.log(bytes)/Math.log(1024)), units.length-1);
+    return (bytes / Math.pow(1024,i)).toFixed(i === 0 ? 0 : 2) + " " + units[i];
+}
+
+function escapeHTML(value){
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[ch]));
+}
+
+function healthyNodes(){
+    return state.nodes.filter(n => n.status === "HEALTHY");
+}
+
+function getNode(id){
+    return state.nodes.find(n => n.id === id);
+}
+
+function getObject(id){
+    return state.objects.find(o => o.id === id);
+}
+
+function addLog(tag, message, type="info"){
+    state.logs.unshift({
+        id: uid("log"),
+        time: timeString(),
+        tag,
+        message,
+        type
+    });
+    state.logs = state.logs.slice(0,200);
+    renderActivity();
+    persistMeta();
+}
+
+function toast(title, message, type="info"){
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<strong>${escapeHTML(title)}</strong><span>${escapeHTML(message)}</span>`;
+    $("toastWrap").appendChild(el);
+    setTimeout(()=>el.remove(),4200);
+}
+
+function openDB(){
+    return new Promise((resolve,reject)=>{
+        const request = indexedDB.open(CONFIG.dbName, CONFIG.dbVersion);
+        request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if(!db.objectStoreNames.contains(CONFIG.objectStore)){
+                const store = db.createObjectStore(CONFIG.objectStore,{keyPath:"key"});
+                store.createIndex("objectId","objectId",{unique:false});
+            }
+            if(!db.objectStoreNames.contains(CONFIG.metaStore)){
+                db.createObjectStore(CONFIG.metaStore,{keyPath:"key"});
+            }
+        };
+        request.onsuccess = ()=>resolve(request.result);
+        request.onerror = ()=>reject(request.error);
+    });
+}
+
+async function dbPut(storeName, value){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(storeName,"readwrite");
+        tx.objectStore(storeName).put(value);
+        tx.oncomplete=()=>{db.close();resolve()};
+        tx.onerror=()=>{db.close();reject(tx.error)};
+    });
+}
+
+async function dbDelete(storeName,key){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(storeName,"readwrite");
+        tx.objectStore(storeName).delete(key);
+        tx.oncomplete=()=>{db.close();resolve()};
+        tx.onerror=()=>{db.close();reject(tx.error)};
+    });
+}
+
+async function dbGetAll(storeName){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(storeName,"readonly");
+        const req = tx.objectStore(storeName).getAll();
+        req.onsuccess=()=>resolve(req.result);
+        req.onerror=()=>reject(req.error);
+        tx.oncomplete=()=>db.close();
+    });
+}
+
+async function dbClear(storeName){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(storeName,"readwrite");
+        tx.objectStore(storeName).clear();
+        tx.oncomplete=()=>{db.close();resolve()};
+        tx.onerror=()=>{db.close();reject(tx.error)};
+    });
+}
+
+async function persistMeta(){
+    try{
+        await dbPut(CONFIG.metaStore,{
+            key:"state",
+            value:{
+                nodes: state.nodes,
+                objects: state.objects,
+                repairs: state.repairs,
+                logs: state.logs,
+                replicationFactor: state.replicationFactor
+            }
+        });
+    }catch(e){
+        console.error("Metadata persistence error",e);
+    }
+}
+
+async function loadMeta(){
+    try{
+        const rows = await dbGetAll(CONFIG.metaStore);
+        const saved = rows.find(x=>x.key==="state");
+        if(saved && saved.value){
+            state = {...state,...saved.value};
+        }else{
+            initializeState();
+        }
+    }catch(e){
+        console.error(e);
+        initializeState();
+    }
+}
+
+function initializeState(){
+    state.nodes = [];
+    for(let i=1;i<=CONFIG.nodeCount;i++){
+        state.nodes.push({
+            id:i,
+            name:"Node "+i,
+            status:"HEALTHY",
+            capacity:CONFIG.nodeCapacityBytes
+        });
+    }
+    state.objects=[];
+    state.repairs=[];
+    state.logs=[];
+    state.replicationFactor=CONFIG.defaultReplication;
+}
+
+async function sha256(blob){
+    const buffer = await blob.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256",buffer);
+    return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function replicasFor(obj){
+    return obj.replicas.map(r=>({
+        ...r,
+        node:getNode(r.nodeId)
+    }));
+}
+
+async function storeReplica(object, nodeId, blob, checksum, status="VALID"){
+    const key = `${object.id}::${nodeId}`;
+    await dbPut(CONFIG.objectStore,{
+        key,
+        objectId:object.id,
+        nodeId,
+        name:object.name,
+        type:object.type,
+        size:object.size,
+        checksum,
+        status,
+        blob,
+        createdAt:Date.now()
+    });
+    return key;
+}
+
+async function getReplica(objectId,nodeId){
+    const rows = await dbGetAll(CONFIG.objectStore);
+    return rows.find(x=>x.objectId===objectId && x.nodeId===nodeId);
+}
+
+async function allReplicas(objectId){
+    const rows = await dbGetAll(CONFIG.objectStore);
+    return rows.filter(x=>x.objectId===objectId);
+}
+
+async function deleteObjectEverywhere(objectId){
+    const rows = await allReplicas(objectId);
+    for(const row of rows) await dbDelete(CONFIG.objectStore,row.key);
+}
+
+async function uploadFile(file){
+    if(!file) return;
+
+    const healthy = healthyNodes();
+    if(healthy.length < state.replicationFactor){
+        toast("Upload blocked","Not enough healthy nodes for the selected replication factor.","error");
+        return;
+    }
+
+    const checksum = await sha256(file);
+    const object = {
+        id:uid("obj"),
+        name:file.name,
+        type:file.type || "application/octet-stream",
+        size:file.size,
+        checksum,
+        createdAt:Date.now(),
+        replicas:[],
+        status:"HEALTHY"
+    };
+
+    const placement = healthy.slice(0,state.replicationFactor);
+
+    for(const node of placement){
+        await storeReplica(object,node.id,file,checksum,"VALID");
+        object.replicas.push({
+            nodeId:node.id,
+            checksum,
+            status:"VALID"
+        });
+    }
+
+    state.objects.push(object);
+    await persistMeta();
+    addLog("UPLOAD",`${file.name} stored with ${placement.length} replicas`,"success");
+    toast("Upload complete",`${file.name} is replicated ${placement.length}×.`);
+    renderAll();
+}
+
+async function verifyReplica(object, replica){
+    const node = getNode(replica.nodeId);
+    if(!node || node.status!=="HEALTHY"){
+        replica.status="UNAVAILABLE";
+        return {ok:false,reason:"NODE_UNAVAILABLE"};
+    }
+
+    const row = await getReplica(object.id,replica.nodeId);
+    if(!row){
+        replica.status="MISSING";
+        return {ok:false,reason:"MISSING"};
+    }
+
+    const actual = await sha256(row.blob);
+    if(actual !== object.checksum){
+        replica.status="CORRUPTED";
+        return {ok:false,reason:"CHECKSUM_MISMATCH",actual};
+    }
+
+    replica.checksum=actual;
+    replica.status="VALID";
+    return {ok:true,actual};
+}
+
+async function verifyObject(object){
+    let valid=0;
+    const results=[];
+    for(const replica of object.replicas){
+        const result=await verifyReplica(object,replica);
+        results.push({replica,result});
+        if(result.ok) valid++;
+    }
+
+    if(valid >= state.replicationFactor) object.status="HEALTHY";
+    else if(valid>0) object.status="DEGRADED";
+    else object.status="UNAVAILABLE";
+
+    return {valid,results};
+}
+
+async function verifyAll(){
+    if(!state.objects.length){
+        toast("Integrity scan","There are no objects to scan.");
+        return;
+    }
+    addLog("SCAN","Integrity scan started");
+    for(const object of state.objects){
+        await verifyObject(object);
+    }
+    await persistMeta();
+    addLog("SCAN","Integrity scan completed","success");
+    toast("Integrity verified","All objects were checked against their SHA-256 checksums.");
+    renderAll();
+}
+
+async function failNode(nodeId){
+    const node=getNode(nodeId); if(!node || node.status==='FAILED') return;
+    node.status='FAILED';
+    for(const object of state.objects){
+        const r=object.replicas.find(x=>x.nodeId===nodeId); if(r) r.status='UNAVAILABLE';
+        await verifyObject(object);
+    }
+    await persistMeta(); addLog('NODE FAILURE',`${node.name} marked FAILED.`,'error');
+    toast('Node failed',`${node.name} is unavailable.`,'error'); renderAll();
+}
+async function recoverNode(nodeId){
+    const node=getNode(nodeId); if(!node) return;
+    node.status='HEALTHY';
+    for(const object of state.objects){ const r=object.replicas.find(x=>x.nodeId===nodeId); if(r) r.status='MISSING'; }
+    await persistMeta(); addLog('NODE RECOVERY',`${node.name} is back online.`,'success');
+    toast('Node recovered',`${node.name} is online. Repairing affected replicas.`);
+    for(const object of state.objects){ if(object.replicas.some(r=>r.nodeId===nodeId)) await repairObject(object.id); }
+    renderAll();
+}
+async function corruptReplica(objectId,nodeId){
+    const object=getObject(objectId);
+    if(!object) return;
+
+    const node=getNode(nodeId);
+    if(!node || node.status!=="HEALTHY"){
+        toast("Cannot corrupt","The selected node is not healthy.","error");
+        return;
+    }
+
+    const row=await getReplica(objectId,nodeId);
+    if(!row){
+        toast("Replica missing","No replica exists on this node.","error");
+        return;
+    }
+
+    const original=await row.blob.arrayBuffer();
+    const altered=new Uint8Array(original.byteLength+12);
+    altered.set(new Uint8Array(original),0);
+    altered.set(new TextEncoder().encode("CORRUPTED!"),original.byteLength);
+
+    const corruptedBlob=new Blob([altered],{type:row.type});
+    row.blob=corruptedBlob;
+    row.status="CORRUPTED";
+    await dbPut(CONFIG.objectStore,row);
+
+    const replica=object.replicas.find(r=>r.nodeId===nodeId);
+    if(replica) replica.status="CORRUPTED";
+
+    await verifyObject(object);
+    await persistMeta();
+
+    addLog("CORRUPTION",`${object.name} corrupted on ${node.name}`,"error");
+    toast("Corruption injected",`${object.name} on ${node.name} now has a checksum mismatch.`,"error");
+    renderAll();
+}
+
+async function repairObject(objectId){
+    const object=getObject(objectId); if(!object) return {success:false};
+    object.status='REPAIRING'; renderAll();
+    const healthy=healthyNodes();
+    let sources=[];
+    for(const r of object.replicas){ const v=await verifyReplica(object,r); if(v.ok) sources.push(r); }
+    if(!sources.length){ object.status='UNAVAILABLE'; await persistMeta(); renderAll(); toast('Repair failed','No healthy source replica is available.','error'); return {success:false}; }
+    const sourceRow=await getReplica(object.id,sources[0].nodeId);
+    let valid=0;
+    for(const r of object.replicas){ const v=await verifyReplica(object,r); if(v.ok) valid++; }
+    for(const node of healthy){
+        if(valid>=state.replicationFactor) break;
+        const existing=object.replicas.find(r=>r.nodeId===node.id);
+        if(existing && existing.status==='VALID') continue;
+        const blob=sourceRow.blob.slice(0,sourceRow.blob.size,sourceRow.type);
+        await storeReplica(object,node.id,blob,object.checksum,'VALID');
+        if(existing){ existing.status='VALID'; existing.checksum=object.checksum; }
+        else object.replicas.push({nodeId:node.id,checksum:object.checksum,status:'VALID'});
+        valid++;
+    }
+    const check=await verifyObject(object);
+    if(check.valid>=state.replicationFactor){
+        object.status='HEALTHY';
+        state.repairs.unshift({id:uid('repair'),objectId:object.id,objectName:object.name,time:timeString(),sourceNode:sources[0].nodeId,result:'SUCCESS'});
+        addLog('REPAIR',`${object.name} repaired: ${check.valid}/${state.replicationFactor} verified replicas`,'success');
+        toast('Repair complete',`${object.name} is healthy again.`);
+    }else if(check.valid>0){ object.status='DEGRADED'; toast('Repair incomplete',`${check.valid}/${state.replicationFactor} replicas are healthy.`,'warning'); }
+    else object.status='UNAVAILABLE';
+    await persistMeta(); renderAll(); return {success:object.status==='HEALTHY'};
+}
+async function repairAll(){
+    const targets=state.objects.filter(o=>o.status!=="HEALTHY");
+    if(!targets.length){
+        toast("Repair center","No objects currently require repair.");
+        return;
+    }
+    addLog("REPAIR","Automatic repair cycle started");
+    for(const object of targets) await repairObject(object.id);
+    addLog("REPAIR","Automatic repair cycle completed","success");
+    renderAll();
+}
+
+async function downloadObject(objectId){
+    const object=getObject(objectId);
+    if(!object) return;
+
+    const verification=await verifyObject(object);
+    const valid=object.replicas.find(r=>r.status==="VALID");
+
+    if(!valid){
+        toast("Download unavailable","No verified healthy replica is currently available.","error");
+        renderAll();
+        return;
+    }
+
+    const row=await getReplica(object.id,valid.nodeId);
+    if(!row){
+        toast("Download failed","Verified replica could not be read.","error");
+        return;
+    }
+
+    const url=URL.createObjectURL(row.blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=object.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+
+    addLog("RETRIEVE",`${object.name} retrieved from ${getNode(valid.nodeId).name}`,"success");
+    await persistMeta();
+}
+
+async function deleteObject(objectId){
+    const object=getObject(objectId);
+    if(!object) return;
+
+    if(!confirm(`Delete "${object.name}" and all of its replicas?`)) return;
+
+    await deleteObjectEverywhere(objectId);
+    state.objects=state.objects.filter(o=>o.id!==objectId);
+    await persistMeta();
+
+    addLog("DELETE",`${object.name} deleted from Vault`,"warning");
+    toast("Object deleted",object.name);
+    renderAll();
+}
+
+function objectStatusText(object){
+    return object.status || "UNKNOWN";
+}
+
+function objectStatusClass(object){
+    const s=objectStatusText(object).toLowerCase();
+    return s==="healthy"?"healthy":
+           s==="degraded"?"degraded":
+           s==="corrupted"?"corrupted":
+           s==="repairing"?"repairing":"unavailable";
+}
+
+async function openObject(objectId){
+    const object=getObject(objectId);
+    if(!object) return;
+
+    const rows=await allReplicas(object.id);
+    const replicaRows=object.replicas.map(rep=>{
+        const node=getNode(rep.nodeId);
+        const row=rows.find(r=>r.nodeId===rep.nodeId);
+        return {rep,node,row};
+    });
+
+    const root=document.createElement("div");
+    root.className="modal-backdrop";
+    root.innerHTML=`
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">OBJECT DETAILS</div>
+            <h2 style="margin:4px 0">${escapeHTML(object.name)}</h2>
+          </div>
+          <button class="close">×</button>
+        </div>
+        <div class="grid detail-grid">
+          <div>
+            <div class="kv"><span>Size</span><strong>${formatBytes(object.size)}</strong></div>
+            <div class="kv"><span>Type</span><strong>${escapeHTML(object.type)}</strong></div>
+            <div class="kv"><span>Replication</span><strong>${object.replicas.length} configured ${state.replicationFactor}×</strong></div>
+            <div class="kv"><span>Status</span><strong class="${object.status==="HEALTHY"?"green":object.status==="DEGRADED"?"yellow":"red"}">${object.status}</strong></div>
+          </div>
+          <div>
+            <div class="kv"><span>SHA-256</span><strong class="code">${object.checksum}</strong></div>
+            <div class="kv"><span>Created</span><strong>${new Date(object.createdAt).toLocaleString()}</strong></div>
+            <div class="kv"><span>Verified replicas</span><strong>${object.replicas.filter(r=>r.status==="VALID").length}</strong></div>
+          </div>
+        </div>
+        <h3 style="margin:20px 0 10px;font-size:14px">Replica map</h3>
+        <div>
+          ${replicaRows.map(x=>`
+            <div class="repair-item">
+              <strong>${escapeHTML(x.node?.name || "Unknown node")}</strong>
+              <p>Status: <span class="${x.rep.status==="VALID"?"green":"red"}">${x.rep.status}</span></p>
+              <div class="code">${x.row ? x.row.checksum : "Replica data unavailable"}</div>
+              <div class="actions" style="margin-top:8px">
+                <button class="btn danger corrupt-btn" data-node="${x.rep.nodeId}" ${x.rep.status==="VALID"?"":"disabled"}>CORRUPT THIS REPLICA</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+        <div class="actions" style="margin-top:16px">
+          <button class="btn primary modal-download">DOWNLOAD</button>
+          <button class="btn success modal-repair">VERIFY / REPAIR</button>
+          <button class="btn danger modal-delete">DELETE OBJECT</button>
+        </div>
+      </div>
+    `;
+
+    $("modalRoot").classList.remove("hidden");
+    $("modalRoot").appendChild(root);
+
+    root.querySelector(".close").onclick=()=>root.remove();
+    root.addEventListener("click",e=>{
+        if(e.target===root) root.remove();
+    });
+    root.querySelector(".modal-download").onclick=async()=>{await downloadObject(object.id);root.remove()};
+    root.querySelector(".modal-repair").onclick=async()=>{await repairObject(object.id);root.remove()};
+    root.querySelector(".modal-delete").onclick=async()=>{await deleteObject(object.id);root.remove()};
+    root.querySelectorAll(".corrupt-btn").forEach(btn=>{
+        btn.onclick=async()=>{
+            await corruptReplica(object.id,Number(btn.dataset.node));
+            root.remove();
+            await openObject(object.id);
+        };
+    });
+}
+
+function renderStats(){
+    const active=healthyNodes().length;
+    $("statNodes").textContent=`${active}/${state.nodes.length}`;
+    $("statObjects").textContent=state.objects.length;
+    $("statReplication").textContent=`${state.replicationFactor}×`;
+
+    let valid=0,total=0,used=0;
+    state.objects.forEach(o=>{
+        o.replicas.forEach(r=>{
+            total++;
+            if(r.status==="VALID") valid++;
+            if(r.status==="VALID") used+=o.size;
+        });
+    });
+
+    $("statReplicas").textContent=`${valid}/${total}`;
+    $("statStorage").textContent=formatBytes(used);
+    $("statRepairs").textContent=state.repairs.filter(r=>r.result==="SUCCESS").length;
+
+    $("policyReplication").textContent=`${state.replicationFactor}×`;
+    $("replicationSelect").value=String(state.replicationFactor);
+}
+
+function renderHealth(){
+    const active=healthyNodes().length;
+    const badge=$("healthBadge");
+    badge.className="health";
+    if(active===state.nodes.length){
+        badge.innerHTML='<i class="health-dot"></i><span>SYSTEM HEALTHY</span>';
+    }else if(active>0){
+        badge.classList.add("degraded");
+        badge.innerHTML='<i class="health-dot"></i><span>SYSTEM DEGRADED</span>';
+    }else{
+        badge.classList.add("failed");
+        badge.innerHTML='<i class="health-dot"></i><span>SYSTEM UNAVAILABLE</span>';
+    }
+}
+
+function renderNodes(){
+    $("nodeSummary").textContent=`${healthyNodes().length}/${state.nodes.length} healthy`;
+    $("nodesGrid").innerHTML=state.nodes.map(node=>{
+        const nodeObjects=state.objects.filter(o=>o.replicas.some(r=>r.nodeId===node.id && r.status==="VALID"));
+        const used=nodeObjects.reduce((sum,o)=>sum+o.size,0);
+        const pct=Math.min(100,(used/node.capacity)*100);
+        return `
+        <div class="card node">
+            <div class="node-head">
+                <div>
+                    <div class="node-name">${escapeHTML(node.name)}</div>
+                    <div class="node-id">logical storage node #${node.id}</div>
+                </div>
+                <span class="pill ${node.status.toLowerCase()}">${node.status}</span>
+            </div>
+            <div class="progress"><i style="width:${pct}%"></i></div>
+            <div class="node-meta"><span>${formatBytes(used)} used</span><span>${formatBytes(node.capacity)}</span></div>
+            <div class="node-meta" style="margin-top:7px"><span>Verified objects</span><span>${nodeObjects.length}</span></div>
+            <div class="node-actions">
+                ${node.status==="HEALTHY"
+                    ? `<button class="btn danger fail-node" data-id="${node.id}">FAIL NODE</button>`
+                    : `<button class="btn success recover-node" data-id="${node.id}">RECOVER</button>`}
+            </div>
+        </div>`;
+    }).join("");
+
+    document.querySelectorAll(".fail-node").forEach(b=>b.onclick=()=>failNode(Number(b.dataset.id)));
+    document.querySelectorAll(".recover-node").forEach(b=>b.onclick=()=>recoverNode(Number(b.dataset.id)));
+}
+
+function renderTopology(){
+    const summary = `${healthyNodes().length}/${state.nodes.length} nodes healthy`;
+    $("topologySummary").textContent=summary;
+    $("topology").innerHTML=state.nodes.map(node=>{
+        const replicas=state.objects.reduce((count,o)=>count+o.replicas.filter(r=>r.nodeId===node.id && r.status==="VALID").length,0);
+        return `<div class="topology-node ${node.status.toLowerCase()}">
+            <div class="tn-name">${escapeHTML(node.name)}</div>
+            <div class="tn-state">● ${node.status}</div>
+            <div class="tn-reps">${replicas} verified replica${replicas===1?"":"s"}</div>
+        </div>`;
+    }).join("");
+}
+
+function renderObjects(){
+    const q=$("objectSearch").value.trim().toLowerCase();
+    const list=state.objects.filter(o=>o.name.toLowerCase().includes(q));
+    if(!list.length){
+        $("objectsBody").innerHTML=`<tr><td colspan="6" class="empty">${q?"No matching objects.":"No objects stored. Choose a file above to begin."}</td></tr>`;
+        return;
+    }
+
+    $("objectsBody").innerHTML=list.map(o=>{
+        const valid=o.replicas.filter(r=>r.status==="VALID").length;
+        return `
+        <tr>
+            <td><div class="object-name">${escapeHTML(o.name)}</div><div class="object-meta">${escapeHTML(o.type)}</div></td>
+            <td>${formatBytes(o.size)}</td>
+            <td><div class="mini-replica">${o.replicas.map(r=>`<span class="replica-dot ${r.status==="VALID"?"ok":"bad"}">N${r.nodeId} ${r.status}</span>`).join("")}</div></td>
+            <td><div class="code" style="max-width:180px">${o.checksum.slice(0,18)}…</div></td>
+            <td><span class="status ${objectStatusClass(o)}">${objectStatusText(o)}</span></td>
+            <td><div class="actions">
+                <button class="btn" data-open="${o.id}">VIEW</button>
+                <button class="btn primary" data-download="${o.id}" ${valid?"":"disabled"}>DOWNLOAD</button>
+                ${o.status!=="HEALTHY"?`<button class="btn success" data-repair="${o.id}">REPAIR</button>`:""}
+            </div></td>
+        </tr>`;
+    }).join("");
+
+    document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openObject(b.dataset.open));
+    document.querySelectorAll("[data-download]").forEach(b=>b.onclick=()=>downloadObject(b.dataset.download));
+    document.querySelectorAll("[data-repair]").forEach(b=>b.onclick=()=>repairObject(b.dataset.repair));
+}
+
+function renderRepair(){
+    const active=state.objects.filter(o=>o.status!=="HEALTHY");
+    const recent=state.repairs.slice(0,10);
+
+    let html="";
+    if(active.length){
+        html+=active.map(o=>`
+            <div class="repair-item">
+                <strong>${escapeHTML(o.name)}</strong>
+                <p>Status: <span class="${o.status==="DEGRADED"?"yellow":"red"}">${o.status}</span> · Valid replicas: ${o.replicas.filter(r=>r.status==="VALID").length}/${state.replicationFactor}</p>
+                <button class="btn success repair-one" data-id="${o.id}">REPAIR OBJECT</button>
+            </div>
+        `).join("");
+    }
+    if(recent.length){
+        html+=`<div class="section-desc" style="margin:14px 0 8px">Recent completed repairs</div>`;
+        html+=recent.map(r=>`
+            <div class="repair-item">
+                <strong>${escapeHTML(r.objectName)}</strong>
+                <p>${r.time} · source Node ${r.sourceNode} · ${r.result}</p>
+            </div>
+        `).join("");
+    }
+    $("repairList").innerHTML=html||`<div class="empty">No active repairs. The cluster is currently clean.</div>`;
+    document.querySelectorAll(".repair-one").forEach(b=>b.onclick=()=>repairObject(b.dataset.id));
+}
+
+function renderIntegrity(){
+    if(!state.objects.length){
+        $("integrityList").innerHTML=`<div class="empty">No objects available for integrity verification.</div>`;
+        return;
+    }
+    $("integrityList").innerHTML=state.objects.map(o=>{
+        const valid=o.replicas.filter(r=>r.status==="VALID").length;
+        return `
+        <div class="repair-item">
+            <strong>${escapeHTML(o.name)}</strong>
+            <p>SHA-256: <span class="code">${o.checksum.slice(0,28)}…</span></p>
+            <p>Verified replicas: ${valid}/${state.replicationFactor} · Status: <span class="${o.status==="HEALTHY"?"green":o.status==="DEGRADED"?"yellow":"red"}">${o.status}</span></p>
+        </div>`;
+    }).join("");
+}
+
+function renderActivity(){
+    if(!state.logs.length){
+        $("activityLog").innerHTML=`<div class="empty">No activity yet.</div>`;
+        return;
+    }
+    $("activityLog").innerHTML=state.logs.map(l=>`
+        <div class="log-row">
+            <span class="log-time">${escapeHTML(l.time)}</span>
+            <span class="log-tag ${l.type==="error"?"red":l.type==="success"?"green":l.type==="warning"?"yellow":"blue"}">${escapeHTML(l.tag)}</span>
+            <span>${escapeHTML(l.message)}</span>
+        </div>
+    `).join("");
+}
+
+function renderAll(){
+    renderStats();
+    renderHealth();
+    renderNodes();
+    renderTopology();
+    renderObjects();
+    renderRepair();
+    renderIntegrity();
+    renderActivity();
+}
+
+async function resetVault(){
+    if(!confirm("Reset Vault? This deletes all stored browser-local objects, replicas and metadata.")) return;
+    await dbClear(CONFIG.objectStore);
+    await dbClear(CONFIG.metaStore);
+    initializeState();
+    await persistMeta();
+    addLog("RESET","Vault reset completed","warning");
+    toast("Vault reset","All objects and replicas were removed.");
+    renderAll();
+}
+
+function setupNavigation(){
+    document.querySelectorAll(".nav").forEach(btn=>{
+        btn.addEventListener("click",()=>{
+            document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));
+            btn.classList.add("active");
+            const view=btn.dataset.view;
+            const target={
+                overview:"uploadSection",
+                objects:"objectsSection",
+                nodes:"nodesSection",
+                topology:"topologySection",
+                repair:"repairSection",
+                integrity:"integritySection",
+                policies:"policiesSection",
+                activity:"activitySection"
+            }[view];
+            if(target) $(target).scrollIntoView({behavior:"smooth",block:"start"});
+        });
+    });
+}
+
+function setupUpload(){
+    const input=$("fileInput");
+    const zone=$("dropZone");
+
+    input.addEventListener("change",async e=>{
+        const file=e.target.files[0];
+        if(file) await uploadFile(file);
+        input.value="";
+    });
+
+    ["dragenter","dragover"].forEach(event=>{
+        zone.addEventListener(event,e=>{
+            e.preventDefault();zone.classList.add("drag");
+        });
+    });
+    ["dragleave","drop"].forEach(event=>{
+        zone.addEventListener(event,e=>{
+            e.preventDefault();zone.classList.remove("drag");
+        });
+    });
+    zone.addEventListener("drop",async e=>{
+        const file=e.dataTransfer.files[0];
+        if(file) await uploadFile(file);
+    });
+}
+
+async function runChaosTest(){
+    if(!state.objects.length){
+        toast("Chaos test needs an object","Upload a file first so Vault has data to protect.","warning");
+        return;
+    }
+    if(state.replicationFactor < 2){
+        toast("Increase replication first","Use at least 2× replication for a meaningful failure demo.","warning");
+        return;
+    }
+
+    const object=state.objects.find(o=>o.replicas.filter(r=>r.status==="VALID").length>=2) || state.objects[0];
+    const candidates=object.replicas.filter(r=>r.status==="VALID").map(r=>r.nodeId);
+    if(candidates.length<2){
+        toast("Not enough healthy replicas","Repair the object before running the resilience test.","error");
+        return;
+    }
+
+    const failedNodeId=candidates[0];
+    const corruptNodeId=candidates[1];
+    const failedNode=getNode(failedNodeId);
+    const corruptNode=getNode(corruptNodeId);
+    const started=performance.now();
+    const steps=[];
+    const button=$("chaosBtn");
+    button.disabled=true;
+    button.textContent="RUNNING…";
+
+    try{
+        steps.push("Baseline verified");
+        await failNode(failedNodeId);
+        steps.push(`${failedNode.name} failed`);
+
+        await corruptReplica(object.id,corruptNodeId);
+        steps.push(`${corruptNode.name} corruption injected`);
+
+        await verifyObject(object);
+        steps.push("Integrity mismatch detected");
+
+        await repairAll();
+        steps.push("Replica repair completed");
+
+        await recoverNode(failedNodeId);
+        steps.push(`${failedNode.name} recovered`);
+
+        await verifyObject(object);
+        const elapsed=Math.round(performance.now()-started);
+        const valid=object.replicas.filter(r=>r.status==="VALID").length;
+        const passed=object.status==="HEALTHY" && valid>=state.replicationFactor;
+        $("chaosResult").innerHTML=`<strong>${passed?"✓ CHAOS TEST PASSED":"⚠ CHAOS TEST COMPLETED WITH DEGRADED STATE"}</strong><br>${steps.map(escapeHTML).join(" → ")}<br><strong>Recovery workflow:</strong> ${elapsed} ms · <strong>Final replicas:</strong> ${valid}/${state.replicationFactor} · <strong>Integrity:</strong> ${passed?"PASS":"CHECK REQUIRED"}`;
+        addLog("CHAOS TEST",`${passed?"Passed":"Completed"}: failure + corruption + repair + recovery in ${elapsed} ms`,passed?"success":"warning");
+        toast(passed?"Chaos test passed":"Chaos test completed",`${valid}/${state.replicationFactor} replicas verified.` ,passed?"success":"warning");
+        renderAll();
+    }catch(e){
+        console.error(e);
+        addLog("CHAOS TEST","Test failed unexpectedly","error");
+        $("chaosResult").innerHTML=`<strong>✕ CHAOS TEST FAILED</strong><br>${escapeHTML(e?.message || "Unexpected error")}`;
+        toast("Chaos test failed","Check the activity log for details.","error");
+    }finally{
+        button.disabled=false;
+        button.textContent="RUN CHAOS TEST";
+        renderAll();
+    }
+}
+
+function setupControls(){
+    $("chaosBtn").onclick=runChaosTest;
+
+    $("replicationSelect").addEventListener("change",async e=>{
+        const value=Number(e.target.value);
+        const healthy=healthyNodes().length;
+        if(value>healthy){
+            toast("Policy rejected",`Only ${healthy} healthy nodes are available.`,"error");
+            e.target.value=String(state.replicationFactor);
+            return;
+        }
+        state.replicationFactor=value;
+        for(const object of state.objects) await verifyObject(object);
+        await persistMeta();
+        addLog("POLICY",`Replication factor changed to ${value}×`,"success");
+        toast("Policy updated",`New objects will target ${value} replicas.`);
+        renderAll();
+    });
+
+    $("scanBtn").onclick=verifyAll;
+    $("verifyBtn").onclick=verifyAll;
+    $("repairAllBtn").onclick=repairAll;
+    $("repairCenterBtn").onclick=repairAll;
+    $("resetBtn").onclick=resetVault;
+
+    $("failNextBtn").onclick=async()=>{
+        const node=state.nodes.find(n=>n.status==="HEALTHY");
+        if(node) await failNode(node.id);
+        else toast("No healthy node","All nodes are already failed.","error");
+    };
+
+    $("clearLogBtn").onclick=async()=>{
+        state.logs=[];
+        await persistMeta();
+        renderActivity();
+    };
+
+    $("objectSearch").addEventListener("input",renderObjects);
+}
+
+async function bootstrap(){
+    await loadMeta();
+
+    if(!state.nodes || !state.nodes.length) initializeState();
+
+    setupNavigation();
+    setupUpload();
+    setupControls();
+    renderAll();
+}
+
+bootstrap();
+</script>
+</body>
+</html>
