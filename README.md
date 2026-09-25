@@ -1,0 +1,2 @@
+# Vault---Distributed-Object-Storage
+Vault – Fault-tolerant distributed object storage system that stores, replicates, retrieves &amp; auto-repairs large data across unreliable nodes. Handles concurrent R/W, node failures, partitions, corruption &amp; inconsistency with configurable durability, background rebalancing &amp; integrity checks while ensuring predictable availability &amp; low overhead.
